@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DocIntake.Api/DocIntake.Api.csproj" />
+    <Project Path="src/DocIntake.Core/DocIntake.Core.csproj" />
+    <Project Path="src/DocIntake.Worker/DocIntake.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DocIntake.Tests/DocIntake.Tests.csproj" />
+  </Folder>
+</Solution>
