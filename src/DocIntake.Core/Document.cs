@@ -25,19 +25,38 @@ public class Document
 
     public DateTimeOffset CreatedAt { get; }
 
+    private readonly List<string> _reviewReasons = [];
+
+    /// <summary>Why a human needs to look at this document; empty unless Status is NeedsReview.</summary>
+    public IReadOnlyList<string> ReviewReasons => _reviewReasons;
+
+    /// <summary>Records a successful extraction that had no validation issues.</summary>
+    public void MarkExtracted(double confidence) => MarkExtracted(confidence, []);
+
     /// <summary>
-    /// Records a successful extraction. High-confidence results are approved;
-    /// everything else is routed to a human for review.
+    /// Records a successful extraction. The document is Approved only when confidence
+    /// is at least <see cref="AutoApproveThreshold"/> and there are no validation issues;
+    /// otherwise it goes to NeedsReview with a reason for each problem.
     /// </summary>
-    public void MarkExtracted(double confidence)
+    public void MarkExtracted(double confidence, IEnumerable<string> validationIssues)
     {
         if (double.IsNaN(confidence) || confidence < 0.0 || confidence > 1.0)
         {
             throw new ArgumentOutOfRangeException(nameof(confidence), confidence, "Confidence must be between 0.0 and 1.0.");
         }
+        ArgumentNullException.ThrowIfNull(validationIssues);
 
         Confidence = confidence;
-        Status = confidence >= AutoApproveThreshold
+        _reviewReasons.Clear();
+
+        if (confidence < AutoApproveThreshold)
+        {
+            _reviewReasons.Add(FormattableString.Invariant(
+                $"Extraction confidence {confidence:0.00} is below the {AutoApproveThreshold:0.00} threshold."));
+        }
+        _reviewReasons.AddRange(validationIssues);
+
+        Status = _reviewReasons.Count == 0
             ? DocumentStatus.Approved
             : DocumentStatus.NeedsReview;
     }
@@ -45,6 +64,7 @@ public class Document
     /// <summary>Records that processing failed for this document.</summary>
     public void MarkFailed()
     {
+        _reviewReasons.Clear();
         Status = DocumentStatus.Failed;
     }
 }

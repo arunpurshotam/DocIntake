@@ -20,4 +20,13 @@ public class InMemoryDocumentStore : IDocumentStore
         _documents.TryGetValue(id, out var document);
         return Task.FromResult(document);
     }
+
+    public Task<IReadOnlyList<Document>> ListByStatusAsync(DocumentStatus status, CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<Document> matches = _documents.Values
+            .Where(d => d.Status == status)
+            .OrderBy(d => d.CreatedAt)
+            .ToList();
+        return Task.FromResult(matches);
+    }
 }
