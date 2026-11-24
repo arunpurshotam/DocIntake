@@ -1,7 +1,11 @@
-using DocIntake.Core;
+using DocIntake.Core.Abstractions;
+using DocIntake.Core.Domain;
+using DocIntake.Core.Services;
 using DocIntake.Core.Validation;
+using DocIntake.Infrastructure.Extraction;
+using DocIntake.Infrastructure.Storage;
 
-namespace DocIntake.Tests;
+namespace DocIntake.Tests.Services;
 
 public class DocumentProcessorTests
 {

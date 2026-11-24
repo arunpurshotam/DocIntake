@@ -1,3 +1,5 @@
+using DocIntake.Core.Domain;
+
 namespace DocIntake.Core.Validation;
 
 /// <summary>Fails when a field every wage statement must have is missing or blank.</summary>

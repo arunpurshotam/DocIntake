@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
+using DocIntake.Core.Abstractions;
+using DocIntake.Core.Domain;
 
-namespace DocIntake.Core;
+namespace DocIntake.Infrastructure.Storage;
 
 /// <summary>Thread-safe, process-local store. Data is lost on restart.</summary>
 public class InMemoryDocumentStore : IDocumentStore

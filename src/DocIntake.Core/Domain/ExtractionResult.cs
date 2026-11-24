@@ -1,4 +1,4 @@
-namespace DocIntake.Core;
+namespace DocIntake.Core.Domain;
 
 /// <summary>The fields an extractor read from a document, and how sure it is about them.</summary>
 public class ExtractionResult

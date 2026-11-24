@@ -1,4 +1,7 @@
-namespace DocIntake.Core;
+using DocIntake.Core.Abstractions;
+using DocIntake.Core.Domain;
+
+namespace DocIntake.Infrastructure.Extraction;
 
 /// <summary>
 /// Stand-in extractor that returns fixed, synthetic wage-statement fields.

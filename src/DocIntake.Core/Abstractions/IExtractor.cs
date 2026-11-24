@@ -1,4 +1,6 @@
-namespace DocIntake.Core;
+using DocIntake.Core.Domain;
+
+namespace DocIntake.Core.Abstractions;
 
 /// <summary>Reads structured fields out of a document's content (e.g. OCR or an AI model).</summary>
 public interface IExtractor

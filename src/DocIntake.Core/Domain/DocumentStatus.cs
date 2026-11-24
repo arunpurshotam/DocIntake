@@ -1,4 +1,4 @@
-namespace DocIntake.Core;
+namespace DocIntake.Core.Domain;
 
 /// <summary>Where a document is in the intake pipeline.</summary>
 public enum DocumentStatus

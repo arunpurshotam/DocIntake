@@ -1,6 +1,8 @@
+using DocIntake.Core.Abstractions;
+using DocIntake.Core.Domain;
 using DocIntake.Core.Validation;
 
-namespace DocIntake.Core;
+namespace DocIntake.Core.Services;
 
 /// <summary>
 /// Runs one document through the pipeline: extract -> validate -> decide -> save.

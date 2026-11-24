@@ -1,6 +1,7 @@
-using DocIntake.Core;
+using DocIntake.Core.Domain;
+using DocIntake.Infrastructure.Storage;
 
-namespace DocIntake.Tests;
+namespace DocIntake.Tests.Infrastructure;
 
 public class InMemoryDocumentStoreTests
 {

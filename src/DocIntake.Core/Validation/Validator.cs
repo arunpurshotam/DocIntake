@@ -1,3 +1,5 @@
+using DocIntake.Core.Domain;
+
 namespace DocIntake.Core.Validation;
 
 /// <summary>Runs every validation rule and collects all of their issues.</summary>

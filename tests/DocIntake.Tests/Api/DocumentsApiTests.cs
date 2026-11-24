@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 
-namespace DocIntake.Tests;
+namespace DocIntake.Tests.Api;
 
 /// <summary>
 /// End-to-end tests: the real app runs in memory and receives real multipart HTTP requests,

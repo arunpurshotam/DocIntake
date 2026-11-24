@@ -1,11 +1,14 @@
 using System.Text;
 using DocIntake.Api.Controllers;
-using DocIntake.Core;
+using DocIntake.Core.Domain;
+using DocIntake.Core.Services;
 using DocIntake.Core.Validation;
+using DocIntake.Infrastructure.Extraction;
+using DocIntake.Infrastructure.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace DocIntake.Tests;
+namespace DocIntake.Tests.Api;
 
 public class ReviewQueueTests
 {

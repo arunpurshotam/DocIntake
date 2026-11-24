@@ -1,4 +1,4 @@
-namespace DocIntake.Core;
+namespace DocIntake.Core.Domain;
 
 /// <summary>A document submitted for intake, plus its processing outcome.</summary>
 public class Document

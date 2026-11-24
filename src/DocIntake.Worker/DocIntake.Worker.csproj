@@ -13,5 +13,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DocIntake.Core\DocIntake.Core.csproj" />
+    <ProjectReference Include="..\DocIntake.Infrastructure\DocIntake.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

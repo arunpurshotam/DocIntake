@@ -1,6 +1,9 @@
 using System.Text.Json.Serialization;
-using DocIntake.Core;
+using DocIntake.Core.Abstractions;
+using DocIntake.Core.Services;
 using DocIntake.Core.Validation;
+using DocIntake.Infrastructure.Extraction;
+using DocIntake.Infrastructure.Storage;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);

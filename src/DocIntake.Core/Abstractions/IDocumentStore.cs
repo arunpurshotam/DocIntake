@@ -1,4 +1,6 @@
-namespace DocIntake.Core;
+using DocIntake.Core.Domain;
+
+namespace DocIntake.Core.Abstractions;
 
 /// <summary>Persists documents. Async so a real database can replace the in-memory version later.</summary>
 public interface IDocumentStore

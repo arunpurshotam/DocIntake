@@ -1,7 +1,7 @@
-using DocIntake.Core;
+using DocIntake.Core.Domain;
 using DocIntake.Core.Validation;
 
-namespace DocIntake.Tests;
+namespace DocIntake.Tests.Validation;
 
 public class ValidationRuleTests
 {

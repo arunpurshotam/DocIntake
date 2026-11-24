@@ -1,4 +1,6 @@
-using DocIntake.Core;
+using DocIntake.Core.Abstractions;
+using DocIntake.Core.Domain;
+using DocIntake.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DocIntake.Api.Controllers;

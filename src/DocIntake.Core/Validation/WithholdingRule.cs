@@ -1,4 +1,5 @@
 using System.Globalization;
+using DocIntake.Core.Domain;
 
 namespace DocIntake.Core.Validation;
 

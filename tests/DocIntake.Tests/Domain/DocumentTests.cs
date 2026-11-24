@@ -1,6 +1,6 @@
-using DocIntake.Core;
+using DocIntake.Core.Domain;
 
-namespace DocIntake.Tests;
+namespace DocIntake.Tests.Domain;
 
 public class DocumentTests
 {

@@ -1,3 +1,5 @@
+using DocIntake.Core.Domain;
+
 namespace DocIntake.Core.Validation;
 
 /// <summary>One business check on extracted fields.</summary>
