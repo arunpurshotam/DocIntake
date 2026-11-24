@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using DocIntake.Core.Abstractions;
 using DocIntake.Core.Domain;
 
@@ -6,10 +7,12 @@ namespace DocIntake.Infrastructure.Extraction;
 /// <summary>
 /// Stand-in extractor that returns fixed, synthetic wage-statement fields.
 /// The file name picks the scenario, so each pipeline path can be tried by hand:
-///   contains "broken" -> throws (document ends up Failed)
+///   contains "broken" -> permanent error (no retries; Failed + dead letter)
+///   contains "flaky"  -> transient error on the first 2 attempts for that document, then succeeds
 ///   contains "blurry" -> confidence 0.60 (NeedsReview)
 ///   contains "good"   -> confidence 0.95 (Approved)
 ///   anything else     -> confidence 0.80 (NeedsReview; unknown quality goes to a human)
+/// "flaky" combines with the confidence keywords, e.g. "w2-flaky-good.pdf" ends up Approved.
 /// Matching ignores case. The content stream is not read.
 /// </summary>
 public class FakeExtractor : IExtractor
@@ -17,14 +20,26 @@ public class FakeExtractor : IExtractor
     public const double GoodConfidence = 0.95;
     public const double BlurryConfidence = 0.60;
     public const double DefaultConfidence = 0.80;
+    public const int FlakyFailuresBeforeSuccess = 2;
+
+    // Attempts seen per document, so "flaky" fails a fixed number of times per document.
+    private readonly ConcurrentDictionary<Guid, int> _attempts = new();
 
     public Task<ExtractionResult> ExtractAsync(Document doc, Stream content)
     {
         ArgumentNullException.ThrowIfNull(doc);
 
+        var attempt = _attempts.AddOrUpdate(doc.Id, 1, (_, previous) => previous + 1);
+
         if (NameContains(doc, "broken"))
         {
-            throw new InvalidOperationException($"Simulated extraction failure for '{doc.FileName}'.");
+            throw new InvalidOperationException($"Simulated permanent extraction failure for '{doc.FileName}'.");
+        }
+
+        if (NameContains(doc, "flaky") && attempt <= FlakyFailuresBeforeSuccess)
+        {
+            throw new TransientExtractionException(
+                $"Simulated temporary extraction failure for '{doc.FileName}' (attempt {attempt}).");
         }
 
         var confidence = NameContains(doc, "blurry") ? BlurryConfidence

@@ -6,18 +6,23 @@ public class Document
     /// <summary>Extraction confidence at or above this value is auto-approved.</summary>
     public const double AutoApproveThreshold = 0.90;
 
-    public Document(string fileName)
+    public Document(string fileName, string? contentHash = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
 
         Id = Guid.NewGuid();
         FileName = fileName;
+        ContentHash = contentHash;
         Status = DocumentStatus.Received;
         CreatedAt = DateTimeOffset.UtcNow;
     }
 
     public Guid Id { get; }
     public string FileName { get; }
+
+    /// <summary>SHA-256 of the uploaded bytes (lowercase hex), used to detect duplicate uploads.</summary>
+    public string? ContentHash { get; }
+
     public DocumentStatus Status { get; private set; }
 
     /// <summary>Extraction confidence from 0.0 to 1.0; null until extraction has run.</summary>
@@ -29,6 +34,13 @@ public class Document
 
     /// <summary>Why a human needs to look at this document; empty unless Status is NeedsReview.</summary>
     public IReadOnlyList<string> ReviewReasons => _reviewReasons;
+
+    /// <summary>Records that a worker has picked the document up and is extracting it.</summary>
+    public void MarkProcessing()
+    {
+        _reviewReasons.Clear();
+        Status = DocumentStatus.Processing;
+    }
 
     /// <summary>Records a successful extraction that had no validation issues.</summary>
     public void MarkExtracted(double confidence) => MarkExtracted(confidence, []);

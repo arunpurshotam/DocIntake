@@ -58,6 +58,26 @@ public class DocumentTests
     }
 
     [Fact]
+    public void NewDocument_KeepsContentHash()
+    {
+        var document = new Document("invoice-001.pdf", contentHash: "abc123");
+
+        Assert.Equal("abc123", document.ContentHash);
+    }
+
+    [Fact]
+    public void MarkProcessing_SetsStatus_AndClearsOldReasons()
+    {
+        var document = new Document("invoice-001.pdf");
+        document.MarkExtracted(0.50); // NeedsReview with a reason
+
+        document.MarkProcessing();
+
+        Assert.Equal(DocumentStatus.Processing, document.Status);
+        Assert.Empty(document.ReviewReasons);
+    }
+
+    [Fact]
     public void MarkFailed_SetsStatusToFailed()
     {
         var document = new Document("invoice-001.pdf");

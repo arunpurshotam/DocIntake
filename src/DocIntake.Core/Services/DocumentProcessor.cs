@@ -5,25 +5,50 @@ using DocIntake.Core.Validation;
 namespace DocIntake.Core.Services;
 
 /// <summary>
-/// Runs one document through the pipeline: extract -> validate -> decide -> save.
+/// Runs one document through the pipeline:
+/// mark Processing -> extract (with retries) -> validate -> decide -> save.
+/// If extraction finally fails, the document is marked Failed and a dead letter is recorded.
 /// </summary>
-public class DocumentProcessor(IExtractor extractor, Validator validator, IDocumentStore store)
+public class DocumentProcessor(
+    IExtractor extractor,
+    Validator validator,
+    IDocumentStore store,
+    IDocumentContentStore contentStore,
+    IDeadLetterStore deadLetters,
+    IExtractionRetryPolicy retryPolicy)
 {
-    public async Task ProcessAsync(Document document, Stream content, CancellationToken cancellationToken = default)
+    public async Task ProcessAsync(Document document, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(document);
-        ArgumentNullException.ThrowIfNull(content);
 
+        document.MarkProcessing();
+        await store.SaveAsync(document, cancellationToken);
+
+        var attempts = 0;
         ExtractionResult result;
         try
         {
-            result = await extractor.ExtractAsync(document, content);
+            result = await retryPolicy.ExecuteAsync(async token =>
+            {
+                attempts++;
+                // A fresh stream per attempt, so a retry never sees a half-read stream.
+                await using var content = await contentStore.OpenReadAsync(document.Id, token)
+                    ?? throw new InvalidOperationException($"No stored content for document {document.Id}.");
+                return await extractor.ExtractAsync(document, content);
+            }, cancellationToken);
         }
-        catch (Exception)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            // Any extractor error is a processing failure for this document, not a crash for the caller.
+            throw; // Shutting down: not the document's fault, so don't dead-letter it.
+        }
+        catch (Exception ex)
+        {
+            // Retries exhausted, or a permanent error: give up on this document.
             document.MarkFailed();
             await store.SaveAsync(document, cancellationToken);
+            await deadLetters.AddAsync(
+                new DeadLetter(document.Id, $"{ex.GetType().Name}: {ex.Message}", attempts, DateTimeOffset.UtcNow),
+                cancellationToken);
             return;
         }
 

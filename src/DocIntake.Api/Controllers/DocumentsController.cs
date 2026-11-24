@@ -1,17 +1,24 @@
+using System.Security.Cryptography;
 using DocIntake.Core.Abstractions;
 using DocIntake.Core.Domain;
-using DocIntake.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DocIntake.Api.Controllers;
 
 [ApiController]
 [Route("documents")]
-public class DocumentsController(IDocumentStore store, DocumentProcessor processor) : ControllerBase
+public class DocumentsController(
+    IDocumentStore store,
+    IDocumentContentStore contentStore,
+    IJobQueue queue) : ControllerBase
 {
-    /// <summary>Accepts an uploaded file, registers it, and processes it right away.</summary>
+    /// <summary>
+    /// Accepts an uploaded file and queues it for background processing (202 Accepted).
+    /// Uploading the same bytes again returns the existing document instead (200 OK).
+    /// </summary>
     [HttpPost]
-    [ProducesResponseType<UploadResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<UploadResponse>(StatusCodes.Status202Accepted)]
+    [ProducesResponseType<UploadResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Upload(IFormFile? file, CancellationToken cancellationToken)
     {
@@ -33,18 +40,30 @@ public class DocumentsController(IDocumentStore store, DocumentProcessor process
                 detail: $"'{fileName}' was received but contains 0 bytes. Upload a file with content.");
         }
 
-        var document = new Document(fileName);
-
-        // Save first so the document exists as Received even if processing hits an unexpected error.
-        await store.SaveAsync(document, cancellationToken);
-
-        // Synchronous for now; a background worker will take this over in a later milestone.
-        await using (var content = file.OpenReadStream())
+        byte[] content;
+        using (var buffer = new MemoryStream())
         {
-            await processor.ProcessAsync(document, content, cancellationToken);
+            await file.CopyToAsync(buffer, cancellationToken);
+            content = buffer.ToArray();
+        }
+        var hash = Convert.ToHexStringLower(SHA256.HashData(content));
+
+        // Idempotent: the same bytes always map to the same document, and are only queued once.
+        var existing = await store.FindByContentHashAsync(hash, cancellationToken);
+        if (existing is not null)
+        {
+            return Ok(new UploadResponse(existing.Id, existing.Status));
         }
 
-        return CreatedAtAction(nameof(GetById), new { id = document.Id }, new UploadResponse(document.Id, document.Status));
+        var document = new Document(fileName, hash);
+
+        // Content first, then the Received document, then the job: by the time the worker
+        // sees the id, everything it needs is already stored.
+        await contentStore.SaveAsync(document.Id, content, cancellationToken);
+        await store.SaveAsync(document, cancellationToken);
+        await queue.EnqueueAsync(document.Id, cancellationToken);
+
+        return AcceptedAtAction(nameof(GetById), new { id = document.Id }, new UploadResponse(document.Id, document.Status));
     }
 
     /// <summary>Returns a document by Id, or 404 if it does not exist.</summary>
@@ -71,6 +90,6 @@ public class DocumentsController(IDocumentStore store, DocumentProcessor process
             : $"{expected} Received file field(s): {string.Join(", ", receivedFields.Select(n => $"'{n}'"))}.";
     }
 
-    /// <summary>What POST /documents returns: the new document's Id and its status after processing.</summary>
+    /// <summary>What POST /documents returns: the document's Id and its current status.</summary>
     public record UploadResponse(Guid Id, DocumentStatus Status);
 }

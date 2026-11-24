@@ -11,6 +11,9 @@ public interface IDocumentStore
     /// <summary>Returns the document, or null if no document has that Id.</summary>
     Task<Document?> GetAsync(Guid id, CancellationToken cancellationToken = default);
 
+    /// <summary>Returns the document whose content has this SHA-256 hash, or null if there is none.</summary>
+    Task<Document?> FindByContentHashAsync(string hash, CancellationToken cancellationToken = default);
+
     /// <summary>Returns all documents with the given status, oldest first.</summary>
     Task<IReadOnlyList<Document>> ListByStatusAsync(DocumentStatus status, CancellationToken cancellationToken = default);
 }

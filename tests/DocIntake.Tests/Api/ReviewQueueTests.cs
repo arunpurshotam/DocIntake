@@ -4,6 +4,8 @@ using DocIntake.Core.Domain;
 using DocIntake.Core.Services;
 using DocIntake.Core.Validation;
 using DocIntake.Infrastructure.Extraction;
+using DocIntake.Infrastructure.Queue;
+using DocIntake.Infrastructure.Resilience;
 using DocIntake.Infrastructure.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,14 +15,26 @@ namespace DocIntake.Tests.Api;
 public class ReviewQueueTests
 {
     private readonly InMemoryDocumentStore _store = new();
+    private readonly InMemoryDocumentContentStore _content = new();
 
-    private DocumentsController CreateDocumentsController() =>
-        new(_store, new DocumentProcessor(
+    // Runs a document through the real pipeline (fake extractor, real rules, no retry delays).
+    private async Task ProcessAsync(string fileName)
+    {
+        var processor = new DocumentProcessor(
             new FakeExtractor(),
             new Validator([new RequiredFieldsRule(), new WithholdingRule()]),
-            _store));
+            _store,
+            _content,
+            new InMemoryDeadLetterStore(),
+            new PollyExtractionRetryPolicy(new ExtractionRetryOptions { BaseDelay = TimeSpan.Zero }));
 
-    private static IFormFile FakeUpload(string fileName, string text = "synthetic content")
+        var document = new Document(fileName);
+        await _content.SaveAsync(document.Id, Encoding.UTF8.GetBytes("synthetic content"));
+        await _store.SaveAsync(document);
+        await processor.ProcessAsync(document);
+    }
+
+    private static IFormFile FakeUpload(string fileName, string text)
     {
         var bytes = Encoding.UTF8.GetBytes(text);
         return new FormFile(new MemoryStream(bytes), 0, bytes.Length, "file", fileName);
@@ -29,10 +43,9 @@ public class ReviewQueueTests
     [Fact]
     public async Task ReviewQueue_ListsOnlyNeedsReviewDocuments_WithReasons()
     {
-        var documents = CreateDocumentsController();
-        await documents.Upload(FakeUpload("w2-good.pdf"), CancellationToken.None);
-        await documents.Upload(FakeUpload("w2-blurry.pdf"), CancellationToken.None);
-        await documents.Upload(FakeUpload("w2-broken.pdf"), CancellationToken.None);
+        await ProcessAsync("w2-good.pdf");
+        await ProcessAsync("w2-blurry.pdf");
+        await ProcessAsync("w2-broken.pdf");
 
         var queue = await new ReviewQueueController(_store).Get(CancellationToken.None);
 
@@ -72,8 +85,9 @@ public class ReviewQueueTests
     public async Task Upload_WithoutFileContent_Returns400(bool attachEmptyFile)
     {
         var file = attachEmptyFile ? FakeUpload("empty.pdf", "") : null;
+        var controller = new DocumentsController(_store, _content, new ChannelJobQueue());
 
-        var result = await CreateDocumentsController().Upload(file, CancellationToken.None);
+        var result = await controller.Upload(file, CancellationToken.None);
 
         var problem = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);

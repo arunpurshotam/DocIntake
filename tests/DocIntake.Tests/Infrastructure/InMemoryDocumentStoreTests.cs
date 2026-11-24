@@ -20,6 +20,18 @@ public class InMemoryDocumentStoreTests
     }
 
     [Fact]
+    public async Task FindByContentHashAsync_ReturnsMatchingDocument_OrNull()
+    {
+        var store = new InMemoryDocumentStore();
+        var document = new Document("w2.pdf", contentHash: "abc123");
+        await store.SaveAsync(document);
+        await store.SaveAsync(new Document("other.pdf", contentHash: "def456"));
+
+        Assert.Same(document, await store.FindByContentHashAsync("abc123"));
+        Assert.Null(await store.FindByContentHashAsync("zzz999"));
+    }
+
+    [Fact]
     public async Task GetAsync_UnknownId_ReturnsNull()
     {
         var store = new InMemoryDocumentStore();

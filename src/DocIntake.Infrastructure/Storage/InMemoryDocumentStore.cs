@@ -23,6 +23,15 @@ public class InMemoryDocumentStore : IDocumentStore
         return Task.FromResult(document);
     }
 
+    public Task<Document?> FindByContentHashAsync(string hash, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(hash);
+
+        // A linear scan is fine for an in-memory demo store; a database would use an index.
+        var match = _documents.Values.FirstOrDefault(d => string.Equals(d.ContentHash, hash, StringComparison.Ordinal));
+        return Task.FromResult(match);
+    }
+
     public Task<IReadOnlyList<Document>> ListByStatusAsync(DocumentStatus status, CancellationToken cancellationToken = default)
     {
         IReadOnlyList<Document> matches = _documents.Values

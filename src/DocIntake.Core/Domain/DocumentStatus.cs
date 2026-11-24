@@ -4,6 +4,7 @@ namespace DocIntake.Core.Domain;
 public enum DocumentStatus
 {
     Received,
+    Processing,
     Extracted,
     NeedsReview,
     Approved,
